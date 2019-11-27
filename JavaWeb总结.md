@@ -195,7 +195,7 @@ TODO:
    <% java 代码（变量、方法调用、表达式等） %>
    ```
 
-   JSP Scriptlets 可以进行属性的定义，也可以输出内容。但是不可以进行方法的定义。因为在 JSP 被编译为 Servlet 的时候，JSP Scriptlets 语句会被放在 _jspService() 方法里，不能再把方法放进方法里。
+   JSP Scriptlets 可以进行属性的定义，也可以输出内容。但是`不可以进行方法的定义`。因为在 JSP 被编译为 Servlet 的时候，JSP Scriptlets 语句会被放在 _jspService() 方法里，不能再把方法放进方法里。
 
 2. JSP 声明语句**
 
@@ -295,7 +295,7 @@ TODO:
 
 EL (Expression Language) 一种简单的`数据访问语言`
 
-### 7.2.1 初始 EL
+### 7.2.1 初识 EL
 
 EL 可以简化 JSP 页面的书写。
 
@@ -338,17 +338,250 @@ TODO: 字符串常量转义
 
 标准标签库，简称 JSTL (JavaServer Pages Standard Tag Library)。
 
-JSTL 由 5 个不同功能的标签库共同组成。5 个标签库都分别指定了不同的 URI 以及建议的前缀。
+JSTL 由` 5 个不同功能的标签库`共同组成。5 个标签库都分别指定了不同的 URI 以及建议的前缀。
 
 ### 7.3.2 JSTL 的使用
 
+1.  导入 JSTL Jar包
+
+2.  使用 taglib 指令导入 标签库。例如引入 Core 标签库：
+
+   ```jsp
+   <%@ taglib uri="http://jaba.sun.com/jsp/jstl/core" prefix="c" %>
+   
+   <html>
+       <head></head>
+       <body>
+           <c:out value="Hello World!"></c:out>
+       </body>
+   </html>
+   ```
+
 ### 7.3.3 JSTL 中的 Core 标签库
 
-Core 标签库是 JSTL 中的核心标签库，包含了 Web应用中通用操作标签。
+Core 标签库是 JSTL 中的`核心标签库`，包含了 Web应用中通用操作标签。
+
+####  1.\<c:out> 标签
+
+​    将一段文本内容或表达式的结果输出到客户端。对于特殊格式 \<c:out> 还可以对其格式化后再输出（可以直接输出 HTML）他有两种情况：
+
+语法一：没有标签体（必须使用 default 属性指定默认值）
+
+    ```jsp
+<c:out value="value" [default="defaultValue"] [escapeXml="{true|false}"] />
+    ```
+
+语法二：有标签体 （在标签体中指定默认值）
+
+```jsp
+<c:out calue="value" [excapeXml="{true|false}"]>
+    defaultValue <%-- 标签体 --%>
+</c:out>
+```
+
+`escapeXml` 属性用于指定将特殊字符格式化为 HTML。默认为 `true`。
+
+#### 2. \<c:if> 标签
+
+​    用于完成 JSP 页面中的条件判断。
+
+​    语法一：没有标签体
+
+    ```jsp
+<c:if test="testCondition" var="result" [scope="{page|request|session|application}"] />
+    ```
+
+​    语法二：有标签体，在标签体中指定要输出的内容
+
+```jsp
+<c:if test="testCondition" var="result" [scope="{page|request|session|application}"]>
+    body content
+</c:if>
+```
+
+- test : 用于设置逻辑表达式
+- var: 用于指定逻辑表达式中变量的名字
+- scope: 用于指定 var 变量的作用范围，默认值为 page。
+
+如果属性 test 的计算结果为 true 就执行标签体，否则则不执行。
+
+例如：
+
+```jsp
+...
+<body>
+    <c:set value="1" var="visitCount" property="visitCount" >
+    <c:if test="${visitCount == 1}">
+        Hello Word!
+    </c:if>
+</body>
+...
+```
+
+#### 3.\<c:choose> 标签
+
+用于实现传统的 if-else 语句。该标签必须配合 \<c:when>、\<c:otherwise> 标签一起使用。
+
+\<c:choose> 标签没有属性，在他的标签体中只能嵌套一个或多个 \<c:when> 标签和零个或一个 \<c:otherwise> 标签。并且 \<c:when> 只能出现在 \<c:otherwise> 标签之后。
+
+常用语法：
+
+```jsp
+<c:choose>
+    <c:when test="逻辑表达式">
+        Hello World !!!
+    </c:when>
+    <c:when test="逻辑表达式">
+        Hello World ++ !!!
+    </c:when>
+    ...
+    <%-- 当 when 都不满足时使用 <c:otherwise> --%>
+    <c:otherwise>
+        Hi !!!
+    </c:otherwise>
+</c:choose>
+```
+
+#### 4. \<c:forEach> 标签
+
+用于循环迭代操作。专门用于`迭代集合对象中的元素`，如 Set,List,Map,数组等。并且`能重复执行标签体中的内容`。他有两种语法格式：
+
+语法1：迭代包含多个对象的集合
+
+```jsp
+<c:forEach [var="varName"] item="collection" [varStatus="varStatusName"] [begin="begin"] [end="end"] [step="step"] >
+    body content
+</c:forEach>
+```
+
+语法2：迭代指定范围内的集合
+
+```jsp
+<c:forEach [var="varName"] [varStatus="varStatusName"] begin="begin" end="end" [step="step"] >
+    body content
+</c:forEach>
+```
+
+- var : 指定迭代元素保存到 page域 的变量名称
+- items : 指定迭代的集合
+- begin : 指定从哪开始，默认从 0 开始迭代
+- step : 指定迭代步长，即迭代因子的增量
+
+例如：迭代一个数组
+
+``` jsp
+<body>
+    <% 
+        String[] fruits = {"苹果","桃子","李子"};
+        List userList = new ArrayList();
+        userList.add("Skyzc");
+        userList.add("Python");
+        userList.add("Java");
+    %>
+    我爱吃的水果有： <br/>
+    <c:forEach var="likefruit" items="<%=fruits%>" >
+        ${likefruit} <br/>
+    </c:forEach>
+    系统用户有：<br/>
+    <c:forEach var="userList" items="<%=useritmes%>" varstatus="status" >
+        ...
+    </c:forEach>
+</body>
+```
+
+- varStatus: 获取集合中元素的序号和索引：
+
+  status.sount:该元素的序号，从 1 开始
+
+  status.index:该元素的索引，从 0 开始
+
+  status.first : 返回布尔类型，判断时候为第一个元素
+
+  status.last: 返回布尔类型，判断时候为最后一个元素
+
+#### 5.\<c:param> 标签和\<c:url>标签
+
+- \<c:param> 用于获取 URL 地址中的附加参数
+- \<c:url> 用于按特定规则重新构造 URL
+- \<c:redirect> 用于重定向
 
 # 第八章、Servlet 高级
 
+​    Filter 和 Listener 是 Servlet 中的两个高级特性。他们两不同于 Servlet 。它们不用去处理 HTTP 请求。
+
+​    `Filter 用于对 request,response 对象进行修改。`
+
+​    `Listener 用于对 context,session,request 事件进行监听。`
+
 ## 8.1 Filter 过滤器
+
+### 8.1.1 什么是 Filter
+
+​    Filter 过滤器。基本功能就是对 Servlet 容器调用 Servlet 的过程进行拦截，从而在 Servlet 进行响应处理前后实现一些特殊功能。
+
+​    开发中使用的 Filter 过滤器，其实就是 javax.servlet.Filter 接口的一个实现类。在 javax.servlet.Filter 接口中定义了3个方法
+
+|                           方法声明                           |                           功能描述                           |
+| :----------------------------------------------------------: | :----------------------------------------------------------: |
+|               init(FilterConfig filterConfig)                |                         初始化过滤器                         |
+| doFilter(ServletRequest request,ServletResponse response,FilterChain chain) | request和response 为传递过来的请求对象和响应对象；chain 代表的是当前 Filter 链的对象， |
+|                          destroy()                           | 销毁方法，用于释放被 Filter 打开的资源，例如 关闭数据库和IO流 |
+
+### 8.1.2 实现一个 Filter 
+
+1. 新建一个 *.filter包，在此包内新建一个MyFilter，实现接口 javax.servlet.Filter
+2. 配置 web.xml，此处配置与配置 Servlet 类似：
+
+```xml
+<!-- <filter> 注册一个 Filter  -->
+<filter>
+    <filter-name>MyFilter</filter-name>
+    <filter-class>*.filter.MyFilter</filter-class>
+</filter>
+<!-- Filter 映射-->
+<filter-mapping>
+    <filter-name>MyFilter</filter-name>
+    <url-pattern>/MyFilter</url-pattern>
+</filter-mapping>
+```
+
+### 8.1.3 Filter 映射
+
+Filter 的映射方式主要分为两种：
+
+#### 1.通配符“*” 拦截所有请求
+
+```xml
+<filter-mapping>
+    <filter>Myfilter</filter>
+    <url-patten>/*</url-patten>
+</filter-mapping>
+```
+
+#### 2. 拦截不同方式的访问请求
+
+可以在 \<filter-mapping> 里面使用一个 \<dispatcher> 子元素来拦截不同方式的请求。
+
+\<dispatcher> 元素的值一共有4个
+
+1. REQUEST
+2. INCLUDE
+3. FORWARD
+4. ERROR
+
+以 FORWARD为例：
+
+TODO:
+
+### 8.1.4 Filter 链
+
+### 8.1.5 FilterConfig 接口
+
+用于获取 Filter 程序在 web.xml 中的配置信息。
+
+### 【任务 8-1】使用 Filter 实现用户自动登录
+
+### 【任务8-2】 使用 Filter 实现统一全站编码
 
 ## 8.2 Listener 监听器--Servlet 事件监听器概述
 
@@ -357,6 +590,31 @@ Core 标签库是 JSTL 中的核心标签库，包含了 Web应用中通用操�
 # 第九章、JDBC
 
 # 第十章、数据库连接池与 DBUtils 工具
+
+## 10.1 数据库连接池
+
+## 10.2 DBUtils 工具
+
+### 10.2.1 DBUtils 工具介绍
+
+Apache组织提供了一个操作数据库的一个组件 DBUtils。
+
+DButils 工具的核心是：
+
+`QueryRunner 类`
+
+`ResultSetHandler 接口`
+
+### 10.2.2 QueryRunner 类
+
+QueryRunner 类主要提供 3 种常见方法。
+
+| query(String sql,ResultSetHandler rsh,Object... params) |      |
+| ------------------------------------------------------- | ---- |
+| update(String Sql,Object... params)                     |      |
+| update(String Sql)                                      |      |
+
+
 
 # 第十二章、文件的上传和下载
 
