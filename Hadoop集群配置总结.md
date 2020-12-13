@@ -10,11 +10,12 @@
 	export JER_HOME=${JAVA_HOME}/jre
 	export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib
 	export PATH=${JAVA_HOME}/bin:$PATH
-# 刷新
+# 使修改立即生效
 [root@master BigData]# source /etc/profile
-# 检测
+# 查看 Java 版本
 [root@master BigData]# java -version
 
 ```
 
 - 配置 ssh 免密登录
+
