@@ -913,5 +913,662 @@ SpringBoot：底层是Spring框架，Spring框架默认是用JCL；‘
 
 ### 2.SLF4j使用
 
-#### 2.1如何再系统中使用SLF4j
+#### 2.1如何在系统中使用SLF4j
+
+以后开发的时候，日志记录方法的调用，不应该直接调用日志的实现类，而是调用日志抽象层里面的方法。
+
+
+
+给系统内导入JLF4J和logback的实现JAR。
+
+```java
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class HelloWorld {
+  public static void main(String[] args) {
+    Logger logger = LoggerFactory.getLogger(HelloWorld.class);
+    logger.info("Hello World");
+  }
+}
+```
+
+
+
+![concrete-bindings](images/concrete-bindings.png)
+
+每一个日志的实现框架都有自己的配置文件。使用SLF4J后，**配置文件还是做成`日志实现框架`自己本身的配置文件**。
+
+#### 2.2遗留问题
+
+a(slf4j+logback):Spring(commons-logging)，Hibernate(jboss--logging),MyBatis，xxx
+
+在这样的项目中，应该统一日 志记录
+
+![legacy](images/legacy.png)
+
+**如何让系统中所有日志都统一到slf4j:**
+
+1. 将系统中其他日志框架先排除出去；
+2. 用中间包来替换原有的日志框架；
+3. 导入SLF4J其他的实现
+
+Spring Boot 就是这样实现的。
+
+### 3、SpringBoot日志关系
+
+![img](images/springbootlogging_all.png)
+
+SpringBoot日志底层依赖关系：
+
+![springbootlogging](images/springbootlogging.png)
+
+总结：：
+
+1. SpringBoot底层也是使用slf4j+logback的方式进行日志记录
+2. SpringBoot也把其他日志都替换成了slf4j
+3. 中间替换包
+
+```java
+@SuppressWarnings("rawtypes")
+public abstract class LogFactory {
+
+    static String UNSUPPORTED_OPERATION_IN_JCL_OVER_SLF4J = "http://www.slf4j.org/codes.html#unsupported_operation_in_jcl_over_slf4j";
+
+    static LogFactory logFactory = new SLF4JLogFactory();
+```
+
+![img](images/20180131221411.png)
+
+4. 如果我们要引入其他框架？一定要把这个框架默认日志依赖移除掉，不然会造成JAR包冲突。
+
+   Spring框架用的是commons-logging；
+
+   ```xml
+   		<dependency>
+   			<groupId>org.springframework</groupId>
+   			<artifactId>spring-core</artifactId>
+   			<exclusions>
+   				<exclusion>
+   					<groupId>commons-logging</groupId>
+   					<artifactId>commons-logging</artifactId>
+   				</exclusion>
+   			</exclusions>
+   		</dependency>
+   ```
+
+   
+
+**SpringBoot能自动适配所有的日志，而且底层使用`slf4j+logback`的方式记录日志，引入其他框架的时候，只需要把这个框架依赖的日志框架排除掉即可；**
+
+### 4. 日志使用
+
+#### 4.1 默认配置
+
+SpringBoot默认已经配置了日志。
+
+```java
+//记录器
+    Logger logger = LoggerFactory.getLogger(getClass());
+    @Test
+    void contextLoads() {
+        // 日志的级别，由低到高
+        // 可以调整日志输出的级别，日志就指挥在这个级别以后的高级别生效
+        logger.trace("这是trace日志...");
+        logger.debug("这是debug日志...");
+        // SpringBoot默认给我们使用的是 info 级别。（默认只输出info之后的日志）
+        // 没有指定就用SpringBoot默认规定的级别：root级别
+        logger.info("这是info日志...");
+        logger.warn("这是warn日志...");
+        logger.error("这是error日志...");
+    }
+```
+
+可以在配置文件里调整默认的参数：
+
+```properties
+logging.level.top.skyzc=trace
+
+#在某个路径下生成日志文件(可指定完整路径)
+#logging.file.name=spring-boot.log
+
+# 在当前磁盘的根路径下创建spring文件夹和里面的log文件夹，使用spring boot默认的文件名
+logging.file.path=/spring/log
+
+# file.name 比 file.path 优先级高。但是我们一般使用 file.path
+
+# 在控制台输出的日志的格式
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n
+# 在文件输出的日志的格式
+logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n
+```
+
+日志输出格式说明：
+
+```xml
+   日志输出格式：
+		%d表示日期时间，
+		%thread表示线程名，
+		%-5level：级别从左显示5个字符宽度
+		%logger{50} 表示logger名字最长50个字符，否则按照句点分割。 
+		%msg：日志消息，
+		%n是换行符
+    -->
+    %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n
+```
+
+| logging.file | logging.path | Example  | Description                        |
+| ------------ | ------------ | -------- | ---------------------------------- |
+| (none)       | (none)       |          | 只在控制台输出                     |
+| 指定文件名   | (none)       | my.log   | 输出日志到my.log文件               |
+| (none)       | 指定目录     | /var/log | 输出到指定目录的 spring.log 文件中 |
+
+#### 4.2 指定配置
+
+给类路径下放上每个日志框架自己的配置文件即可；SpringBoot就不适用他默认配置的了。
+
+| Logging System          | Customization                                                |
+| ----------------------- | ------------------------------------------------------------ |
+| Logback                 | `logback-spring.xml`, `logback-spring.groovy`, `logback.xml` or `logback.groovy` |
+| Log4j2                  | `log4j2-spring.xml` or `log4j2.xml`                          |
+| JDK (Java Util Logging) | `logging.properties`                                         |
+
+logback.xml：直接就被日志框架识别了；
+
+**logback-spring.xml**：日志框架就不直接加载日志的配置项，由SpringBoot解析日志配置，可以使用SpringBoot的高级Profile功能
+
+```xml
+<springProfile name="staging">
+    <!-- configuration to be enabled when the "staging" profile is active -->
+  	可以指定某段配置只在某个环境下生效
+</springProfile>
+
+```
+
+如：
+
+```xml
+<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <!--
+        日志输出格式：
+			%d表示日期时间，
+			%thread表示线程名，
+			%-5level：级别从左显示5个字符宽度
+			%logger{50} 表示logger名字最长50个字符，否则按照句点分割。 
+			%msg：日志消息，
+			%n是换行符
+        -->
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <springProfile name="dev">
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} ----> [%thread] ---> %-5level %logger{50} - %msg%n</pattern>
+            </springProfile>
+            <springProfile name="!dev">
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} ==== [%thread] ==== %-5level %logger{50} - %msg%n</pattern>
+            </springProfile>
+        </layout>
+    </appender>
+```
+
+
+
+如果使用logback.xml作为日志配置文件，还要使用profile功能，会有以下错误
+
+ `no applicable action for [springProfile]`
+
+### 5.日志框架切换
+
+可以按照 SLF4j 的日志适配图，进行相关切换。
+
+slf4j+log4j的方式；
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+  <exclusions>
+    <exclusion>
+      <artifactId>logback-classic</artifactId>
+      <groupId>ch.qos.logback</groupId>
+    </exclusion>
+    <exclusion>
+      <artifactId>log4j-over-slf4j</artifactId>
+      <groupId>org.slf4j</groupId>
+    </exclusion>
+  </exclusions>
+</dependency>
+
+<dependency>
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-log4j12</artifactId>
+</dependency>
+
+```
+
+
+
+
+
+切换为log4j2
+
+```xml
+   <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                    <groupId>org.springframework.boot</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-log4j2</artifactId>
+</dependency>
+```
+
+-----------------
+
+## 四、WEB开发
+
+### 1.简介
+
+**使用SpringBoot:**
+
+1. 创建SpringBoot应用，选中我们需要的模块
+2. SpringBoot已经默认将这些场景配置好了，只需要在配置文件中指定少量配置就可以运行起来
+3. 自己编写业务代码
+
+**自动配置原理？**
+
+这个场景SpringBoot帮我们配置了什么?能不能修改？能修改哪些配置？能不能扩展？XXX
+
+```java
+xxxxAutoConfiguratiom:帮我们给容器中自动配置组件
+xxxxProperties:配置类来封装配置文件的内容
+```
+
+### 2. SpringBoot 对静态资源的映射规则
+
+```java
+@ConfigurationProperties(prefix = "spring.resources", ignoreUnknownFields = false)
+public class ResourceProperties implements ResourceLoaderAware {
+  //可以设置和静态资源有关的参数，缓存时间等
+```
+
+SpringBoot中，SpringMVC相关的配置都在`WebMvcAutoConfiguration`里面。
+
+WebMvcAutoConfiguration:
+
+```java
+        @Override
+		public void addResourceHandlers(ResourceHandlerRegistry registry) {
+			if (!this.resourceProperties.isAddMappings()) {
+				logger.debug("Default resource handling disabled");
+				return;
+			}
+			Integer cachePeriod = this.resourceProperties.getCachePeriod();
+			if (!registry.hasMappingForPattern("/webjars/**")) {
+				customizeResourceHandlerRegistration(
+						registry.addResourceHandler("/webjars/**")
+								.addResourceLocations(
+										"classpath:/META-INF/resources/webjars/")
+						.setCachePeriod(cachePeriod));
+			}
+			String staticPathPattern = this.mvcProperties.getStaticPathPattern();
+          	//静态资源文件夹映射
+			if (!registry.hasMappingForPattern(staticPathPattern)) {
+				customizeResourceHandlerRegistration(
+						registry.addResourceHandler(staticPathPattern)
+								.addResourceLocations(
+										this.resourceProperties.getStaticLocations())
+						.setCachePeriod(cachePeriod));
+			}
+		}
+
+        //配置欢迎页映射
+		@Bean
+		public WelcomePageHandlerMapping welcomePageHandlerMapping(
+				ResourceProperties resourceProperties) {
+			return new WelcomePageHandlerMapping(resourceProperties.getWelcomePage(),
+					this.mvcProperties.getStaticPathPattern());
+		}
+
+       //配置喜欢的图标
+		@Configuration
+		@ConditionalOnProperty(value = "spring.mvc.favicon.enabled", matchIfMissing = true)
+		public static class FaviconConfiguration {
+
+			private final ResourceProperties resourceProperties;
+
+			public FaviconConfiguration(ResourceProperties resourceProperties) {
+				this.resourceProperties = resourceProperties;
+			}
+
+			@Bean
+			public SimpleUrlHandlerMapping faviconHandlerMapping() {
+				SimpleUrlHandlerMapping mapping = new SimpleUrlHandlerMapping();
+				mapping.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
+              	//所有  **/favicon.ico 
+				mapping.setUrlMap(Collections.singletonMap("**/favicon.ico",
+						faviconRequestHandler()));
+				return mapping;
+			}
+
+			@Bean
+			public ResourceHttpRequestHandler faviconRequestHandler() {
+				ResourceHttpRequestHandler requestHandler = new ResourceHttpRequestHandler();
+				requestHandler
+						.setLocations(this.resourceProperties.getFaviconLocations());
+				return requestHandler;
+			}
+
+		}
+
+```
+
+
+
+1）、所有 /webjars/** ，都去 classpath:/META-INF/resources/webjars/ 找资源；（webjars：以jar包的方式引入静态资源；http://www.webjars.org/）
+
+![JQuery-webjars](images/JQuery-webjars.png)
+
+如果要获取该静态资源可以访问：
+
+localhost:8080/webjars/jquery/3.5.1/jquery.js
+
+```
+<!-- 引入Jquery-webjar (在访问的时候只需要写webjars下面的资源名称即可)-->
+<dependency>
+    <groupId>org.webjars</groupId>
+    <artifactId>jquery</artifactId>
+    <version>3.5.1</version>
+</dependency>
+```
+
+2）、"/**" 访问当前项目的任何资源。都去（静态资源文件夹）找映射
+
+```
+"classpath:/META-INF/resources/", 
+"classpath:/resources/",
+"classpath:/static/", 
+"classpath:/public/" 
+"/"：当前项目的根路径
+```
+
+localhost:8080/abc ===  去静态资源文件夹里面找abc
+
+3）、欢迎页； 静态资源文件夹下的所有index.html页面；被"/**"映射；
+
+​	localhost:8080/   找index页面
+
+4）、所有的 **/favicon.ico  都是在静态资源文件下找；
+
+### 3.模板引擎
+
+JSP、Velocity、Freemarker、Thymeleaf
+
+![template-engine](images/template-engine.png)
+
+SpringBoot推荐的Thymeleaf；
+
+语法更简单，功能更强大；
+
+#### 3.1 引入 thymeleaf
+
+```xml
+        <!--    引入 thymeleaf    -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+```
+
+切换 thymeleaf 版本
+
+```xml
+<properties>
+		<thymeleaf.version>3.0.9.RELEASE</thymeleaf.version>
+		<!-- 布局功能的支持程序  thymeleaf3主程序 适配 layout2以上版本 -->
+		<!-- thymeleaf2 适配 layout1-->
+		<thymeleaf-layout-dialect.version>2.2.2</thymeleaf-layout-dialect.version>
+</properties>
+```
+
+现在 SpringBoot 2+ 默认使用 thymeleaf 3 .
+
+#### 3.2 Thymeleaf 使用&语法
+
+首先查看thymeleaf的自动配置。
+
+```java
+@ConfigurationProperties(
+    prefix = "spring.thymeleaf"
+)
+public class ThymeleafProperties {
+    private static final Charset DEFAULT_ENCODING;
+    public static final String DEFAULT_PREFIX = "classpath:/templates/";
+    public static final String DEFAULT_SUFFIX = ".html";
+    private boolean checkTemplate = true;
+    private boolean checkTemplateLocation = true;
+    private String prefix = "classpath:/templates/";
+    private String suffix = ".html";
+    private String mode = "HTML";
+```
+
+从配置中可知， 只要我们把HTML创建在`"classpath:/templates/"`中，thymeleaf 就能够自动渲染了。
+
+**简单示例：**
+
+001 编写 Controller
+
+```java
+@Controller
+public class HelloController {
+    @RequestMapping("/success")
+        public String success(){
+            // classpath::/templates/success.html
+            return "success";
+        }
+.....
+```
+
+注意此时是使用的 `@Controller`并且方法体上没有“@ResponseBody”，而不是“@RestController”。
+
+002 在 classpath:/templates 下创建 success.html。
+
+003 现在访问 localhost:8080/success 即可访问到页面。
+
+**获取值示例：**
+
+001 在html文件中，导入 thymeleaf 的名称空间
+
+```html
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+```
+
+该名称空间的作用是可以在编写html代码是可以获取 thymeleaf的 一些提示。
+
+002 使用 thymeleaf 语法获取值
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<meta charset="UTF-8">
+<title>SUCCESS</title>
+</head>
+<body>
+<h1>成功了，wow</h1>
+<!-- th:text : 设置文本内容为变量值。若本来就有内容，会直接覆盖原内容-->
+<div th:text="${hello}">这是显示欢迎信息</div>
+</body>
+</html>
+```
+
+#### 3.3 语法规则
+
+1. th:text 改变当前元素的文本内容
+
+   th:html原生属性，替换原生属性
+
+![](images/2018-02-04_123955.png)
+
+2. 表达式
+
+```properties
+Simple expressions:（表达式语法）
+    Variable Expressions: ${...}：获取变量值；OGNL；
+    		1）、获取对象的属性、调用方法
+    		2）、使用内置的基本对象：
+    			#ctx : the context object.
+    			#vars: the context variables.
+                #locale : the context locale.
+                #request : (only in Web Contexts) the HttpServletRequest object.
+                #response : (only in Web Contexts) the HttpServletResponse object.
+                #session : (only in Web Contexts) the HttpSession object.
+                #servletContext : (only in Web Contexts) the ServletContext object.
+                示例：获取 session值
+                ${session.foo}
+            3）、内置的一些工具对象：
+#execInfo : information about the template being processed.
+#messages : methods for obtaining externalized messages inside variables expressions, in the same way as they would be obtained using #{…} syntax.
+#uris : methods for escaping parts of URLs/URIs
+#conversions : methods for executing the configured conversion service (if any).
+#dates : methods for java.util.Date objects: formatting, component extraction, etc.
+#calendars : analogous to #dates , but for java.util.Calendar objects.
+#numbers : methods for formatting numeric objects.
+#strings : methods for String objects: contains, startsWith, prepending/appending, etc.
+#objects : methods for objects in general.
+#bools : methods for boolean evaluation.
+#arrays : methods for arrays.
+#lists : methods for lists.
+#sets : methods for sets.
+#maps : methods for maps.
+#aggregates : methods for creating aggregates on arrays or collections.
+#ids : methods for dealing with id attributes that might be repeated (for example, as a result of an iteration).
+
+    Selection Variable Expressions: *{...}：选择表达式：和${}在功能上是一样；
+    	补充：配合 th:object="${session.user}：
+   <div th:object="${session.user}">
+    <p>Name: <span th:text="*{firstName}">Sebastian</span>.</p>
+    <p>Surname: <span th:text="*{lastName}">Pepper</span>.</p>
+    <p>Nationality: <span th:text="*{nationality}">Saturn</span>.</p>
+    </div>
+    
+    Message Expressions: #{...}：获取国际化内容
+    Link URL Expressions: @{...}：定义URL；
+    		@{/order/process(execId=${execId},execType='FAST')}
+    Fragment Expressions: ~{...}：片段引用表达式
+    		<div th:insert="~{commons :: main}">...</div>
+    		
+Literals（字面量）
+      Text literals: 'one text' , 'Another one!' ,…
+      Number literals: 0 , 34 , 3.0 , 12.3 ,…
+      Boolean literals: true , false
+      Null literal: null
+      Literal tokens: one , sometext , main ,…
+Text operations:（文本操作）
+    String concatenation: +
+    Literal substitutions: |The name is ${name}|
+Arithmetic operations:（数学运算）
+    Binary operators: + , - , * , / , %
+    Minus sign (unary operator): -
+Boolean operations:（布尔运算）
+    Binary operators: and , or
+    Boolean negation (unary operator): ! , not
+Comparisons and equality:（比较运算）
+    Comparators: > , < , >= , <= ( gt , lt , ge , le )
+    Equality operators: == , != ( eq , ne )
+Conditional operators:条件运算（三元运算符）
+    If-then: (if) ? (then)
+    If-then-else: (if) ? (then) : (else)
+    Default: (value) ?: (defaultvalue)
+Special tokens:
+    No-Operation: _ 
+```
+
+实例用法：
+
+HelloController:
+
+```java
+@Controller
+public class HelloController {
+    // 查出一些数据，并在页面展示
+    @RequestMapping("/success")
+    public String success(Map<String,Object> map){
+        map.put("hello","<h1>你好</h1>"); // 这个数据会被放在请求域中
+        map.put("users", Arrays.asList("zhangsan","lisi","wangwu"));
+        return "success";
+    }
+}
+```
+
+success.html
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<meta charset="UTF-8">
+<title>SUCCESS</title>
+</head>
+<body>
+<h1>成功了，wow</h1>
+<!-- th:text : 设置文本内容为变量值。若本来就有内容，会直接覆盖原内容-->
+<div th:text="${hello}">这是显示欢迎信息</div>
+<hr/>
+<div th:utext="hello"></div>
+<hr/>
+<!-- th:each 每次遍历都会生成当前标签 -->
+<h4 th:text="${user}" th:each="user:${users}"></h4>
+<hr/>
+<h4>
+    <!--  不使用 th:text行内写法 [[]] th:text  [()] th:utext  -->
+    <span th:each="user:${users}">
+        [[${user}]]
+    </span>
+</h4>
+</body>
+</html>
+```
+
+
+
+## 五、SpringBoot与Docker
+
+### 1. 简介
+
+**Docker**是一个开源的应用容器引擎；是一个轻量级容器技术；
+
+Docker支持将软件编译成一个镜像；然后在镜像中各种软件做好配置，将镜像发布出去，其他使用者可以直接使用这个镜像；
+
+运行中的这个镜像称为容器，容器启动是非常快速的。
+
+![](F:/BaiduNetdiskDownload/springboot核心篇+整合篇-尚硅谷/01尚硅谷SpringBoot核心技术篇/Spring Boot 笔记+课件/images/搜狗截图20180303145450.png)
+
+
+
+![](F:/BaiduNetdiskDownload/springboot核心篇+整合篇-尚硅谷/01尚硅谷SpringBoot核心技术篇/Spring Boot 笔记+课件/images/搜狗截图20180303145531.png)
+
+### 2. 核心概念
+
+docker 主机（Host）:安装了Docker程序的机器，Docker直接安装在操作系统之上
+
+docker客户端（Client）:连接docker主机进行操作
+
+docker仓库（Registry）:用来保存各种打包好的软件镜像
+
+docker镜像（Images）:软件打包好的镜像，放在docker仓库中
+
+docker容器（Container）:镜像启动后的实例称为一个容器，容器是独立运行的一个或一组应用
+
+使用Docker的步骤：
+
+1. 安装Docker
+2. 去Docker仓库找到这个软件对应的镜像
+3. 使用Docker运行这个镜像，这个镜像就会生成一个Docker容器
+4. 对容器的启动停止，就是对软件的启动停止
+
+### 3. 安装Docker
 
