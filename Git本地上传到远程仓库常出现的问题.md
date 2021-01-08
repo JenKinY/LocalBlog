@@ -104,3 +104,21 @@ so，如果想要大家共同使用一个ssh key，你应该把它新增在个�
 >
 > [分享：git push 时报错 Permission to username/My_python.git denied to deploy key 解决方法](https://blog.csdn.net/hpwzjz/article/details/81459320)
 
+
+
+### remote: 15985428639: Incorrect username or password (access token)
+
+![image-20201223164737688](images/image-20201223164737688.png)
+
+原因是账号密码错误
+
+解决方法：打开电脑的控制面板–>用户账户–>管理Windows凭据（win10可以直接搜索 **凭据管理器 ** ）
+
+```shell
+//或者 改用SSH方式
+git clone git@gitee.com:/gitee账号名/仓库名.git
+```
+
+> Reference:
+>
+> [remote: Incorrect username or password ( access token )](https://blog.csdn.net/qq_25479327/article/details/90270556)
