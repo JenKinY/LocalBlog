@@ -45,21 +45,21 @@
 
 #### 3. 激活IDE
 
-1. 启动软件，然后会弹出 **License Activation** 窗口，此时我们选择**`试用`**（Evaluate for free）:![install-CLion](E:\LocalBlog\images\install-CLion.jpg)
+1. 启动软件，然后会弹出 **License Activation** 窗口，此时我们选择**`试用`**（Evaluate for free）:![install-CLion](images\install-CLion.jpg)
 
-2.  确认试用：![Evaluate-for-free](E:\LocalBlog\images\Evaluate-for-free.jpg)
+2.  确认试用：![Evaluate-for-free](images\Evaluate-for-free.jpg)
 
-3. 然后退出：![30-days-left](E:\LocalBlog\images\30-days-left.jpg)
+3. 然后退出：![30-days-left](images\30-days-left.jpg)
 
 4. 重新启动IDE，就会弹出窗口，我们点击 `Install jetbrains-agent for CLion` ，然后点击`确认`即可成功进入IDE。
 
-![Install-jetbrains-agent-for-CLion](E:\LocalBlog\images\Install-jetbrains-agent-for-CLion.jpg)
+![Install-jetbrains-agent-for-CLion](images\Install-jetbrains-agent-for-CLion.jpg)
 
-![agent-success](E:\LocalBlog\images\agent-success.png)
+![agent-success](images\agent-success.png)
 
 5. 查看激活信息。进入 IDE 后，点击菜单栏 **`"Help>About"`** 即可查看到IDE信息，如果此处显示你的电脑用户名即代表激活成功。若显示的是 "Licensed to Evaluator" 则表示你还在试用状态，激活失败，请检查你的步骤及版本是否正确。
 
-![agent-success-about](E:\LocalBlog\images\agent-success-about.jpg)
+![agent-success-about](images\agent-success-about.jpg)
 
 ### 三、其他
 
